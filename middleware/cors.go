@@ -8,8 +8,6 @@ import (
 
 func Cors() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		method := c.Request.Method
-
 		origin := c.Request.Header.Get("Origin")
 		var headerKeys []string
 		for k, _ := range c.Request.Header {
