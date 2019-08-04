@@ -65,6 +65,19 @@ func List(context *gin.Context) {
 	context.JSON(http.StatusOK, list)
 }
 
+// 发布全部博客
+func DeployAll(context *gin.Context) {
+	defer func() {
+		if x := recover(); x != nil {
+			log.Printf("save error")
+			context.JSON(http.StatusOK, ErrorResult("系统错误"))
+		}
+	}()
+
+	server.HexoDeployAll()
+	context.JSON(http.StatusOK, SuccessResult())
+}
+
 // todo 上传博客文件
 func Upload(context *gin.Context) {
 	defer func() {
