@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/zavier/blog-admin-backend/constants"
+	"github.com/zavier/blog-admin-backend/util"
 	"io/ioutil"
 	"log"
 	"os"
@@ -37,6 +38,13 @@ func HexoDeployAll() {
 		log.Fatal("ReadDir error", err)
 	}
 	for _, f := range infos {
+		if !util.Exists(f.Name()) {
+			_, err := os.Create(f.Name())
+			if err != nil {
+				log.Fatal("create dest file error", err)
+			}
+		}
+
 		bytes, err := ioutil.ReadFile(f.Name())
 		if err != nil {
 			log.Fatal("read file error", err)
