@@ -44,7 +44,7 @@ func Register(context *gin.Context) {
 		}
 	}
 
-	file, err := os.OpenFile(pwdFilePath, os.O_APPEND, 777)
+	file, err := os.OpenFile(pwdFilePath, os.O_WRONLY|os.O_APPEND, 777)
 	if err != nil {
 		log.Fatal("open pwd file error", err)
 		context.JSON(http.StatusInternalServerError, ErrorResult("系统错误"))
@@ -98,7 +98,7 @@ func Login(context *gin.Context) {
 			}
 		}
 	}
-	log.Fatal("do not have this user:%s\n", user.Name)
+	log.Printf("do not have this user:%s\n", user.Name)
 	context.JSON(http.StatusOK, ErrorResult("用户名或密码错误"))
 }
 
