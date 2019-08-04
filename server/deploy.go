@@ -25,6 +25,10 @@ func HexoDeployAll() {
 	if err != nil {
 		log.Fatal("remove old path error", err)
 	}
+	err = os.MkdirAll(sourcePath, 777)
+	if err != nil {
+		log.Fatal("revert hexo source path error", err)
+	}
 
 	list := BlogList()
 	blogMap := make(map[string]BlogBase)
@@ -70,9 +74,25 @@ func HexoDeployAll() {
 		}
 	}
 
-	err = os.Chdir(sourcePath + "../..")
+	err = os.Chdir(sourcePath + "/../..")
 	if err != nil {
 		log.Fatal("chdir fail", err)
 	}
-	exec.Command("hexo", "g")
+
+	cmd := exec.Command("hexo", "g")
+	// 获取输出对象，可以从该对象中读取输出结果
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Fatal("execute deploy command error", err)
+	}
+	defer stdout.Close()
+	// 运行命令
+	if err := cmd.Start(); err != nil {
+		log.Fatal(err)
+	}
+	res, err := ioutil.ReadAll(stdout)
+	if err != nil {
+		log.Fatal("read command result error", err)
+	}
+	log.Println(string(res))
 }
