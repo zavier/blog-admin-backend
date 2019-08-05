@@ -252,6 +252,30 @@ func (blog Blog) UpdateBlog() error {
 	return nil
 }
 
+// 通过ID查询博客信息
+func GetBlog(id int) Blog {
+	list := BlogList()
+	for _, blogBase := range list {
+		if blogBase.Id == id {
+			location := blogBase.Location
+			file, e := os.OpenFile(location, os.O_RDONLY, 777)
+			if e != nil {
+				log.Fatal("open file error", e)
+			}
+			bytes, e := ioutil.ReadAll(file)
+			if e != nil {
+				log.Fatal("read file error", e)
+			}
+			blog := Blog{
+				BlogBase: blogBase,
+				Context:  string(bytes),
+			}
+			return blog
+		}
+	}
+	return Blog{}
+}
+
 // 查询博客列表
 func BlogList() []BlogBase {
 	file, e := os.OpenFile(constants.BlogJsonFileName, os.O_RDONLY, 777)

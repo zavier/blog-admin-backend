@@ -2,7 +2,6 @@ package handler
 
 import (
 	"bufio"
-	"crypto/sha256"
 	"github.com/gin-gonic/gin"
 	"github.com/zavier/blog-admin-backend/constants"
 	"github.com/zavier/blog-admin-backend/util"
@@ -45,12 +44,12 @@ func Register(context *gin.Context) {
 	err := context.ShouldBind(&user)
 	if err != nil {
 		log.Printf("bind user param error: %s\n", err.Error())
-		context.JSON(http.StatusBadRequest, ErrorResult("参数错误"))
+		context.JSON(http.StatusBadRequest, ErrorResult(StatusInternalServerError, "参数错误"))
 		return
 	}
 
 	if !user.checkUserInfo() {
-		context.JSON(http.StatusBadRequest, ErrorResult("参数错误，请检查用户名和密码长度"))
+		context.JSON(http.StatusBadRequest, ErrorResult(StatusInternalServerError, "参数错误，请检查用户名和密码长度"))
 		return
 	}
 
@@ -58,7 +57,7 @@ func Register(context *gin.Context) {
 		_, err := os.Create(pwdFilePath)
 		if err != nil {
 			log.Printf("create pwd file error: %s\n", err.Error())
-			context.JSON(http.StatusInternalServerError, ErrorResult("系统错误"))
+			context.JSON(http.StatusInternalServerError, ErrorResult(StatusInternalServerError, "系统错误"))
 			return
 		}
 	}
@@ -66,17 +65,17 @@ func Register(context *gin.Context) {
 	file, err := os.OpenFile(pwdFilePath, os.O_WRONLY|os.O_APPEND, 777)
 	if err != nil {
 		log.Printf("open pwd file error: %s\n", err.Error())
-		context.JSON(http.StatusInternalServerError, ErrorResult("系统错误"))
+		context.JSON(http.StatusInternalServerError, ErrorResult(StatusInternalServerError, "系统错误"))
 		return
 	}
 	defer file.Close()
 
-	hash := sha256.New()
-	hash.Write([]byte(user.Password))
-	shaPwd := string(hash.Sum(nil))
-	file.WriteString(user.Name + ":" + shaPwd + "\n")
+	//hash := sha256.New()
+	//hash.Write([]byte(user.Password))
+	//shaPwd := string(hash.Sum(nil))
+	file.WriteString(user.Name + ":" + user.Password + "\n")
 
-	context.JSON(http.StatusOK, SuccessResult())
+	context.JSON(http.StatusOK, SuccessResult(true))
 }
 
 func hasRegister(username string) (bool, error) {
@@ -105,14 +104,14 @@ func Login(context *gin.Context) {
 	err := context.ShouldBind(&user)
 	if err != nil {
 		log.Printf("bind user param error: %s\n", err.Error())
-		context.JSON(http.StatusBadRequest, ErrorResult("参数错误"))
+		context.JSON(http.StatusBadRequest, ErrorResult(StatusInternalServerError, "参数错误"))
 		return
 	}
 
 	file, err := os.OpenFile(pwdFilePath, os.O_RDONLY, 777)
 	if err != nil {
 		log.Printf("open pwd file error: %s\n", err.Error())
-		context.JSON(http.StatusInternalServerError, ErrorResult("系统错误"))
+		context.JSON(http.StatusInternalServerError, ErrorResult(StatusInternalServerError, "系统错误"))
 		return
 	}
 	defer file.Close()
@@ -123,26 +122,37 @@ func Login(context *gin.Context) {
 		log.Printf("read pwd context:%s\n", namePwdPair)
 		namePwd := strings.Split(namePwdPair, ":")
 		if namePwd[0] == user.Name {
-			hash := sha256.New()
-			hash.Write([]byte(namePwd[1]))
-			shaPwd := string(hash.Sum(nil))
-			if shaPwd == user.Password {
+			//hash := sha256.New()
+			//hash.Write([]byte(namePwd[1]))
+			//shaPwd := string(hash.Sum(nil))
+			if namePwd[1] == user.Password {
 				context.SetCookie(constants.TokenName, namePwd[1], 65535, "/", "localhost", false, true)
-				context.JSON(http.StatusOK, SuccessResult())
+				context.JSON(http.StatusOK, SuccessResult(true))
 				return
 			} else {
 				log.Printf("password error, excected:%s actual:%s\n", namePwd[1], user.Password)
-				context.JSON(http.StatusOK, ErrorResult("用户名或密码错误"))
+				context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "用户名或密码错误"))
 				return
 			}
 		}
 	}
 	log.Printf("do not have this user:%s\n", user.Name)
-	context.JSON(http.StatusOK, ErrorResult("用户名或密码错误"))
+	context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "用户名或密码错误"))
+}
+
+// 是否已登陆
+func IsLogIn(context *gin.Context) {
+	token, err := context.Request.Cookie(constants.TokenName)
+	log.Printf("token:%v token name:%s, token value:%s", token, token.Name, token.Value)
+	if err != nil || token == nil || token.Value == "" {
+		context.JSON(http.StatusOK, SuccessResult(false))
+	} else {
+		context.JSON(http.StatusOK, SuccessResult(false))
+	}
 }
 
 // 登出
 func Logout(context *gin.Context) {
 	context.SetCookie(constants.TokenName, "", 65535, "/", "localhost", false, true)
-	context.JSON(http.StatusOK, SuccessResult())
+	context.JSON(http.StatusOK, SuccessResult(true))
 }
