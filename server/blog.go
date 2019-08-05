@@ -3,6 +3,7 @@ package server
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"github.com/zavier/blog-admin-backend/common"
 	"github.com/zavier/blog-admin-backend/constants"
 	"github.com/zavier/blog-admin-backend/util"
@@ -253,8 +254,12 @@ func (blog Blog) UpdateBlog() error {
 }
 
 // 通过ID查询博客信息
-func GetBlog(id int) Blog {
-	list := BlogList()
+func GetBlog(id int) (Blog, error) {
+	bases, e := BlogList()
+	if e != nil {
+		return Blog{}, e
+	}
+	list := bases
 	for _, blogBase := range list {
 		if blogBase.Id == id {
 			location := blogBase.Location
@@ -270,17 +275,17 @@ func GetBlog(id int) Blog {
 				BlogBase: blogBase,
 				Context:  string(bytes),
 			}
-			return blog
+			return blog, nil
 		}
 	}
-	return Blog{}
+	return Blog{}, errors.New("此博客不存在")
 }
 
 // 查询博客列表
-func BlogList() []BlogBase {
+func BlogList() ([]BlogBase, error) {
 	file, e := os.OpenFile(constants.BlogJsonFileName, os.O_RDONLY, 777)
 	if e != nil {
-		log.Fatal("open file error", e)
+		return nil, e
 	}
 	var blogList = make([]BlogBase, 0)
 	scanner := bufio.NewScanner(file)
@@ -293,5 +298,5 @@ func BlogList() []BlogBase {
 		}
 		blogList = append(blogList, blogBase)
 	}
-	return blogList
+	return blogList, nil
 }

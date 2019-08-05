@@ -29,7 +29,7 @@ func Save(context *gin.Context) {
 	err = blog.SaveBlog()
 	if err != nil {
 		log.Printf("save blog error: %s\n", err.Error())
-		context.JSON(http.StatusInternalServerError, ErrorResult(StatusInternalServerError, "系统错误"))
+		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "系统错误"))
 		return
 	}
 	context.JSON(http.StatusOK, SuccessResult(true))
@@ -54,7 +54,7 @@ func Update(context *gin.Context) {
 	err = blog.UpdateBlog()
 	if err != nil {
 		log.Printf("update blog error: %s\n", err.Error())
-		context.JSON(http.StatusInternalServerError, ErrorResult(StatusInternalServerError, "系统错误"))
+		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "系统错误"))
 		return
 	}
 	context.JSON(http.StatusOK, SuccessResult(true))
@@ -62,6 +62,13 @@ func Update(context *gin.Context) {
 
 // 查询博客内容
 func GetBlog(context *gin.Context) {
+	defer func() {
+		if x := recover(); x != nil {
+			log.Printf("getBlog error")
+			context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "系统错误"))
+		}
+	}()
+
 	id := context.Query("id")
 	if id == "" {
 		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "ID不能为空"))
@@ -70,9 +77,9 @@ func GetBlog(context *gin.Context) {
 		if e != nil {
 			context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "参数错误"))
 		} else {
-			blog := server.GetBlog(i)
-			if blog.Id == 0 {
-				context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "ID不存在"))
+			blog, err := server.GetBlog(i)
+			if err != nil {
+				context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, err.Error()))
 			} else {
 				context.JSON(http.StatusOK, SuccessResult(blog))
 			}
@@ -82,20 +89,34 @@ func GetBlog(context *gin.Context) {
 
 // 查询博客列表
 func List(context *gin.Context) {
-	list := server.BlogList()
-	context.JSON(http.StatusOK, SuccessResult(list))
+	defer func() {
+		if x := recover(); x != nil {
+			log.Printf("listBlog error")
+			context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "系统错误"))
+		}
+	}()
+
+	list, err := server.BlogList()
+	if err != nil {
+		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, err.Error()))
+	} else {
+		context.JSON(http.StatusOK, SuccessResult(list))
+	}
 }
 
 // 发布全部博客
 func DeployAll(context *gin.Context) {
 	defer func() {
 		if x := recover(); x != nil {
-			log.Printf("save error")
-			context.JSON(http.StatusOK, ErrorResult(StatusOK, "系统错误"))
+			log.Printf("deployAll Blog error")
+			context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "系统错误"))
 		}
 	}()
 
-	server.HexoDeployAll()
+	err := server.HexoDeployAll()
+	if err != nil {
+		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, err.Error()))
+	}
 	context.JSON(http.StatusOK, SuccessResult(true))
 }
 
@@ -103,21 +124,21 @@ func DeployAll(context *gin.Context) {
 func Upload(context *gin.Context) {
 	defer func() {
 		if x := recover(); x != nil {
-			log.Printf("save error")
+			log.Printf("upload error")
 			context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "系统错误"))
 		}
 	}()
 
 	file, err := context.FormFile("file")
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, ErrorResult(StatusInternalServerError, "上传文件失败"))
+		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "上传文件失败"))
 		return
 	}
 	log.Printf("upload file name %s\n", file.Filename)
 
 	err = context.SaveUploadedFile(file, constants.BlogPath+"/"+file.Filename)
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, ErrorResult(StatusInternalServerError, "上传文件失败"))
+		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "上传文件失败"))
 		return
 	}
 

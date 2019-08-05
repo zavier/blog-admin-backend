@@ -18,19 +18,23 @@ tags: ${tags}
 ---`
 
 // 全部发布
-func HexoDeployAll() {
+func HexoDeployAll() error {
 	sourcePath := os.Getenv("SOURCE_PATH")
 	log.Printf("hexo source path: %s\n", sourcePath)
 	err := os.RemoveAll(sourcePath)
 	if err != nil {
-		log.Fatal("remove old path error", err)
+		return err
 	}
 	err = os.MkdirAll(sourcePath, 777)
 	if err != nil {
-		log.Fatal("revert hexo source path error", err)
+		return err
 	}
 
-	list := BlogList()
+	bases, err := BlogList()
+	if err != nil {
+		return err
+	}
+	list := bases
 	blogMap := make(map[string]BlogBase)
 	for _, b := range list {
 		title := b.Title
@@ -39,19 +43,19 @@ func HexoDeployAll() {
 
 	infos, err := ioutil.ReadDir(constants.BlogPath)
 	if err != nil {
-		log.Fatal("ReadDir error", err)
+		return err
 	}
 	for _, f := range infos {
 		if !util.Exists(f.Name()) {
 			_, err := os.Create(f.Name())
 			if err != nil {
-				log.Fatal("create dest file error", err)
+				return err
 			}
 		}
 
 		bytes, err := ioutil.ReadFile(f.Name())
 		if err != nil {
-			log.Fatal("read file error", err)
+			return err
 		}
 		blog := blogMap[f.Name()]
 		newHeader := strings.ReplaceAll(hexoHeader, "${title}", blog.Title)
@@ -66,33 +70,39 @@ func HexoDeployAll() {
 
 		newFile, err := os.Create(sourcePath + "/" + f.Name())
 		if err != nil {
-			log.Fatal("create new file error", err)
+			return err
 		}
 		_, err = newFile.WriteString(context)
 		if err != nil {
-			log.Fatal("write new file error", err)
+			return err
 		}
 	}
 
 	err = os.Chdir(sourcePath + "/../..")
 	if err != nil {
-		log.Fatal("chdir fail", err)
+		return err
 	}
 
 	cmd := exec.Command("hexo", "g")
 	// 获取输出对象，可以从该对象中读取输出结果
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Fatal("execute deploy command error", err)
+		return err
 	}
-	defer stdout.Close()
+	defer func() {
+		e := stdout.Close()
+		if e != nil {
+			log.Fatal("close stdout error", e)
+		}
+	}()
 	// 运行命令
 	if err := cmd.Start(); err != nil {
-		log.Fatal(err)
+		return err
 	}
 	res, err := ioutil.ReadAll(stdout)
 	if err != nil {
-		log.Fatal("read command result error", err)
+		return err
 	}
 	log.Println(string(res))
+	return nil
 }

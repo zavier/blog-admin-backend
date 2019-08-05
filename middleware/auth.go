@@ -29,12 +29,12 @@ func Auth() gin.HandlerFunc {
 		}
 
 		token, err := context.Request.Cookie(constants.TokenName)
-		log.Printf("token:%v token name:%s, token value:%s", token, token.Name, token.Value)
 		if err != nil || token == nil || token.Value == "" {
 			context.Abort()
 			context.JSON(http.StatusOK, handler.ErrorResult(handler.StatusInternalServerError, "认证错误"))
 			return
 		}
+		log.Printf("token:%v token name:%s, token value:%s", token, token.Name, token.Value)
 
 		context.Next()
 	}
