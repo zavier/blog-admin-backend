@@ -181,9 +181,10 @@ func DeployAll(context *gin.Context) {
 		}
 	}()
 
-	err := server.HexoDeployAll()
+	err := server.HexoDeployAll(context.GetString(common.JwtIdentityKey))
 	if err != nil {
 		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, err.Error()))
+		return
 	}
 	context.JSON(http.StatusOK, SuccessResult(true))
 }

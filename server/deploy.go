@@ -1,8 +1,6 @@
 package server
 
 import (
-	"github.com/zavier/blog-admin-backend/common"
-	"github.com/zavier/blog-admin-backend/util"
 	"io/ioutil"
 	"log"
 	"os"
@@ -18,7 +16,8 @@ tags: ${tags}
 ---`
 
 // 全部发布
-func HexoDeployAll() error {
+func HexoDeployAll(username string) error {
+	// 清空文件夹
 	sourcePath := os.Getenv("SOURCE_PATH")
 	log.Printf("hexo source path: %s\n", sourcePath)
 	err := os.RemoveAll(sourcePath)
@@ -30,38 +29,19 @@ func HexoDeployAll() error {
 		return err
 	}
 
-	bases, err := BlogList()
+	// 遍历所有博客，拷贝文件
+	baseBlogList, err := BlogList()
 	if err != nil {
 		return err
 	}
-	list := bases
-	blogMap := make(map[string]BlogBase)
-	for _, b := range list {
-		title := b.Title
-		blogMap[title+".md"] = b
-	}
-
-	infos, err := ioutil.ReadDir(common.BlogPath)
-	if err != nil {
-		return err
-	}
-	for _, f := range infos {
-		exists, err := util.Exists(f.Name())
+	for _, blog := range baseBlogList {
+		if blog.Author != username {
+			continue
+		}
+		bytes, err := ioutil.ReadFile(blog.Location)
 		if err != nil {
 			return err
 		}
-		if !exists {
-			_, err := os.Create(f.Name())
-			if err != nil {
-				return err
-			}
-		}
-
-		bytes, err := ioutil.ReadFile(f.Name())
-		if err != nil {
-			return err
-		}
-		blog := blogMap[f.Name()]
 		newHeader := strings.ReplaceAll(hexoHeader, "${title}", blog.Title)
 		newHeader = strings.ReplaceAll(newHeader, "${date}", time.Now().Format("2006-01-02 15:04:05"))
 		s := blog.Categories
@@ -71,8 +51,7 @@ func HexoDeployAll() error {
 			newHeader = strings.ReplaceAll(newHeader, "${tags}", "")
 		}
 		var context = newHeader + string(bytes)
-
-		newFile, err := os.Create(sourcePath + "/" + f.Name())
+		newFile, err := os.OpenFile(sourcePath+"/"+blog.Title+".md", os.O_CREATE|os.O_WRONLY, 0777)
 		if err != nil {
 			return err
 		}
@@ -80,8 +59,10 @@ func HexoDeployAll() error {
 		if err != nil {
 			return err
 		}
+
 	}
 
+	// 执行hexo命令发布
 	err = os.Chdir(sourcePath + "/../..")
 	if err != nil {
 		return err
