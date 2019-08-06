@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+var jwtMiddleWare *jwt.GinJWTMiddleware
+
 /**
 iss (issuer)：签发人
 exp (expiration time)：过期时间
@@ -20,8 +22,8 @@ nbf (Not Before)：生效时间
 iat (Issued At)：签发时间
 jti (JWT ID)：编号
 */
-func JwtMiddleware() *jwt.GinJWTMiddleware {
-	authMiddleware, err := jwt.New(&jwt.GinJWTMiddleware{
+func init() {
+	middleWare, err := jwt.New(&jwt.GinJWTMiddleware{
 		Realm:       "login",
 		Key:         []byte(constants.JwtSecretKey),
 		Timeout:     time.Hour * 2,
@@ -61,7 +63,8 @@ func JwtMiddleware() *jwt.GinJWTMiddleware {
 			c.JSON(http.StatusOK, handler.SuccessResult(message))
 		},
 		Unauthorized: func(c *gin.Context, code int, message string) {
-			c.JSON(http.StatusOK, handler.ErrorResult(handler.StatusUnauthorized, message))
+			log.Printf("Unauthorized code:%d message%s\n", code, message)
+			c.JSON(http.StatusOK, handler.ErrorResult(handler.StatusUnauthorized, "登录失效"))
 		},
 		// TokenLookup is a string in the form of "<source>:<name>" that is used
 		// to extract token from the request.
@@ -84,5 +87,9 @@ func JwtMiddleware() *jwt.GinJWTMiddleware {
 	if err != nil {
 		log.Fatal("Jwt new error", err)
 	}
-	return authMiddleware
+	jwtMiddleWare = middleWare
+}
+
+func JwtMiddleware() *jwt.GinJWTMiddleware {
+	return jwtMiddleWare
 }

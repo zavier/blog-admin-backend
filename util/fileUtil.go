@@ -1,14 +1,16 @@
 package util
 
-import "os"
+import (
+	"os"
+)
 
-func Exists(path string) bool {
-	_, err := os.Stat(path)
-	if err != nil {
-		if os.IsExist(err) {
-			return true
-		}
-		return false
+// 文件是否存在
+func Exists(path string) (bool, error) {
+	if _, err := os.Stat(path); err == nil {
+		return true, nil
+	} else if os.IsNotExist(err) {
+		return false, nil
+	} else {
+		return false, err
 	}
-	return true
 }

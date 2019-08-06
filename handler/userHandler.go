@@ -25,7 +25,11 @@ func Register(context *gin.Context) {
 	}
 
 	b, err := user.Save()
-	if err != nil || !b {
+	if err != nil {
+		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, err.Error()))
+		return
+	}
+	if !b {
 		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "系统错误"))
 		return
 	}

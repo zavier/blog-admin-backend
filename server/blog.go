@@ -16,7 +16,10 @@ import (
 
 func init() {
 	log.SetFlags(log.Ldate | log.Lshortfile)
-	SyncBlogJsonFile()
+	if err := SyncBlogJsonFile(); err != nil {
+		log.Fatal("SyncBlogJsonFile error", err)
+	}
+
 }
 
 type BlogBase struct {
@@ -40,57 +43,60 @@ func (blog Blog) ToString() string {
 }
 
 // 同步博客json文件及博客索引
-func SyncBlogJsonFile() {
+func SyncBlogJsonFile() error {
 	// 初始化创建路径及必须文件
-	if util.Exists(constants.BlogPath) {
-		err := os.RemoveAll(constants.BlogPath)
-		if err != nil {
-			log.Fatal("create blog path error ", err)
-		}
+	exist, e := util.Exists(constants.BlogPath)
+	if e != nil {
+		return e
 	}
-	if !util.Exists(constants.BlogPath) {
+	if !exist {
 		err := os.Mkdir(constants.BlogPath, 0777)
 		if err != nil {
 			log.Printf("create blog path error:%s\n", err.Error())
-			return
+			return err
 		}
 	}
 
-	if util.Exists(constants.BlogJsonFileName) {
-		err := os.Remove(constants.BlogJsonFileName)
-		if err != nil {
-			log.Fatal("create blog json file error ", err)
-		}
+	firstStart := false
+
+	exist, e = util.Exists(constants.BlogJsonFileName)
+	if e != nil {
+		return e
 	}
-	if !util.Exists(constants.BlogJsonFileName) {
+	if !exist {
 		_, err := os.Create(constants.BlogJsonFileName)
 		if err != nil {
-			log.Fatal("create file error", err)
+			return err
 		}
+		firstStart = true
 	}
 	jsonFile, err := os.OpenFile(constants.BlogJsonFileName, os.O_RDWR, 777)
 	if err != nil {
-		log.Fatal("open file error", err)
+		return err
 	}
 	defer func() {
-		e := jsonFile.Close()
-		if e != nil {
-			log.Fatal("close file error", e)
+		if err := jsonFile.Close(); err != nil {
+			log.Fatal("close file error")
 		}
 	}()
+
+	// 是否是第一次启动，第一次启动时才需要同步文件夹中的内容
+	// 否则直接返回，不进行后续操作
+	if !firstStart {
+		return nil
+	}
 
 	// 初始读取文件夹下所有文件
 	infos, err := ioutil.ReadDir(constants.BlogPath)
 	if err != nil {
-		log.Printf("read blog path error: %s\n", err)
-		return
+		return err
 	}
 	var index = 0
 	for _, file := range infos {
 		name := file.Name()
 		path, err := filepath.Abs(filepath.Dir(file.Name()))
 		if err != nil {
-			log.Fatal("get abs path error", err)
+			return err
 		}
 		index++
 		blogBase := BlogBase{
@@ -100,17 +106,20 @@ func SyncBlogJsonFile() {
 		}
 		bytes, err := json.Marshal(blogBase)
 		if err != nil {
-			log.Fatal("json Marshal error", err.Error())
+			return err
 		}
 		context := string(bytes)
 		_, err = jsonFile.WriteString(context + "\n")
 		if err != nil {
-			log.Fatal("write file error", err)
+			return err
 		}
 	}
 
 	// 初始化索引
-	common.InitIndex(strconv.Itoa(index))
+	if e = common.InitIndex(strconv.Itoa(index)); e != nil {
+		return e
+	}
+	return nil
 }
 
 // 保存博客
@@ -118,18 +127,24 @@ func (blog Blog) SaveBlog() error {
 	// 创建要保存的文件
 	fileName := blog.Title + ".md"
 	filePath := constants.BlogPath + "/" + fileName
-	if util.Exists(filePath) {
+	exist, e := util.Exists(filePath)
+	if e != nil {
+		return e
+	}
+	if exist {
 		log.Printf("filePath:%s has existed", filePath)
-		return common.CheckError{
-			Message: "文件路径已存在",
-		}
+		return errors.New("文件路径已存在")
 	}
 	file, err := os.Create(filePath)
 	if err != nil {
 		log.Printf("create file error: %s\n", err.Error())
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Fatal("close file error")
+		}
+	}()
 
 	// 文件写入
 	_, err = file.WriteString(blog.Context)
@@ -139,15 +154,23 @@ func (blog Blog) SaveBlog() error {
 	}
 
 	// 保存记录信息
-	file, err = os.OpenFile(constants.BlogJsonFileName, os.O_WRONLY|os.O_APPEND, 0777)
+	jsonFile, err := os.OpenFile(constants.BlogJsonFileName, os.O_WRONLY|os.O_APPEND, 0777)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-	blog.Id = common.GetAndIncrIndex()
+	defer func() {
+		err := jsonFile.Close()
+		if err != nil {
+			log.Fatal("close file error")
+		}
+	}()
+	blog.Id, err = common.GetAndIncrIndex()
+	if err != nil {
+		return err
+	}
 	path, err := filepath.Abs(filepath.Dir(filePath))
 	if err != nil {
-		log.Fatal("get abs path error", err)
+		return err
 	}
 	blog.Location = path + "/" + fileName
 
@@ -163,12 +186,12 @@ func (blog Blog) SaveBlog() error {
 
 	bytes, err := json.Marshal(blogBase)
 	if err != nil {
-		log.Fatal("json Marshal error", err.Error())
+		return err
 	}
 	context := string(bytes)
 	_, err = file.WriteString(context + "\n")
 	if err != nil {
-		log.Fatal("write file error", err)
+		return err
 	}
 	return nil
 }
@@ -177,28 +200,33 @@ func (blog Blog) SaveBlog() error {
 func (blog Blog) UpdateBlog() error {
 	var blogId = blog.Id
 	if blogId <= 0 {
-		log.Fatal("blog Id is zero")
+		return errors.New("ID不能小于等于0")
 	}
 
 	// 保存文件
 	var fileName = blog.Title + ".md"
 	filePath := constants.BlogPath + "/" + fileName
-	if !util.Exists(filePath) {
+	exists, e := util.Exists(filePath)
+	if e != nil {
+		return e
+	}
+	if !exists {
 		log.Printf("filePath:%s does not exist, create.", filePath)
-		_, err := os.Create(filePath)
-		if err != nil {
-			log.Fatalf("create file error", err)
+		if _, err := os.Create(filePath); err != nil {
+			return err
 		}
-
 	}
 	blogFile, err := os.OpenFile(filePath, os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		log.Printf("open file error: %s\n", err.Error())
 		return err
 	}
-	defer blogFile.Close()
-	_, err = blogFile.WriteString(blog.Context)
-	if err != nil {
+	defer func() {
+		if err := blogFile.Close(); err != nil {
+			log.Fatal("close file error")
+		}
+	}()
+	if _, err = blogFile.WriteString(blog.Context); err != nil {
 		log.Printf("write file error:%s\n", err.Error())
 		return err
 	}
@@ -208,15 +236,18 @@ func (blog Blog) UpdateBlog() error {
 	if err != nil {
 		return err
 	}
-	defer recordFile.Close()
+	defer func() {
+		if err := recordFile.Close(); err != nil {
+			log.Fatal("close file error")
+		}
+	}()
 	scanner := bufio.NewScanner(recordFile)
-	var blogsList = make([]BlogBase, 0)
+	var blogList = make([]BlogBase, 0)
 	for scanner.Scan() {
 		blogJson := scanner.Text()
 		var b BlogBase
-		err = json.Unmarshal([]byte(blogJson), &b)
-		if err != nil {
-			log.Fatal("Unmarshal error", err)
+		if err := json.Unmarshal([]byte(blogJson), &b); err != nil {
+			return err
 		}
 
 		if blogId == b.Id {
@@ -231,22 +262,21 @@ func (blog Blog) UpdateBlog() error {
 			b.Author = blog.Author
 			b.Categories = blog.Categories
 		}
-		blogsList = append(blogsList, b)
+		blogList = append(blogList, b)
 	}
 
-	log.Printf("blogs : %v\n", blogsList)
+	log.Printf("blogs : %v\n", blogList)
 	recordFile, err = os.OpenFile(constants.BlogJsonFileName, os.O_WRONLY|os.O_TRUNC, 0777)
 	if err != nil {
 		return err
 	}
-	for _, blogBase := range blogsList {
+	for _, blogBase := range blogList {
 		bytes, err := json.Marshal(blogBase)
 		if err != nil {
-			log.Fatal("Marshal error", err)
+			return err
 		}
-		_, err = recordFile.WriteString(string(bytes) + "\n")
-		if err != nil {
-			log.Fatal("write blog record file error", err)
+		if _, err = recordFile.WriteString(string(bytes) + "\n"); err != nil {
+			return err
 		}
 	}
 
@@ -265,11 +295,11 @@ func GetBlog(id int) (Blog, error) {
 			location := blogBase.Location
 			file, e := os.OpenFile(location, os.O_RDONLY, 777)
 			if e != nil {
-				log.Fatal("open file error", e)
+				return Blog{}, e
 			}
 			bytes, e := ioutil.ReadAll(file)
 			if e != nil {
-				log.Fatal("read file error", e)
+				return Blog{}, e
 			}
 			blog := Blog{
 				BlogBase: blogBase,
@@ -294,7 +324,7 @@ func BlogList() ([]BlogBase, error) {
 		var blogBase BlogBase
 		e := json.Unmarshal([]byte(text), &blogBase)
 		if e != nil {
-			log.Fatal("Unmarshal error", e)
+			return nil, e
 		}
 		blogList = append(blogList, blogBase)
 	}

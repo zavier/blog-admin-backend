@@ -46,7 +46,11 @@ func HexoDeployAll() error {
 		return err
 	}
 	for _, f := range infos {
-		if !util.Exists(f.Name()) {
+		exists, err := util.Exists(f.Name())
+		if err != nil {
+			return err
+		}
+		if !exists {
 			_, err := os.Create(f.Name())
 			if err != nil {
 				return err

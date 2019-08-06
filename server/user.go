@@ -42,7 +42,11 @@ func (user User) Save() (bool, error) {
 	if !user.checkUserInfoParam() {
 		return false, errors.New("参数错误，请检查用户名和密码长度")
 	}
-	if !util.Exists(constants.PwdFilePath) {
+	exists, e := util.Exists(constants.PwdFilePath)
+	if e != nil {
+		return false, e
+	}
+	if !exists {
 		_, err := os.Create(constants.PwdFilePath)
 		if err != nil {
 			return false, err
@@ -70,8 +74,7 @@ func (user User) Save() (bool, error) {
 	hash := sha256.New()
 	hash.Write([]byte(user.Password))
 	shaPwd := hex.EncodeToString(hash.Sum(nil))
-	_, err = file.WriteString(user.Name + ":" + shaPwd + "\n")
-	if err != nil {
+	if _, err = file.WriteString(user.Name + ":" + shaPwd + "\n"); err != nil {
 		return false, err
 	}
 	return true, nil

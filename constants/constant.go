@@ -10,4 +10,7 @@ const (
 
 	// cookie有效时间
 	JwtSecretKey = "^BrX!!7V%gzH4#kF9e8Z"
+
+	// 博客索引文件名
+	IndexFile = "index"
 )

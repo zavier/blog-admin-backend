@@ -22,14 +22,14 @@ func Save(context *gin.Context) {
 	err := context.ShouldBind(&blog)
 	if err != nil {
 		log.Printf("blog bind error: %s\n", err.Error())
-		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "参数错误"))
+		context.JSON(http.StatusOK, ErrorResult(StatusBadRequest, "参数错误"))
 		return
 	}
 
 	err = blog.SaveBlog()
 	if err != nil {
 		log.Printf("save blog error: %s\n", err.Error())
-		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "系统错误"))
+		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, err.Error()))
 		return
 	}
 	context.JSON(http.StatusOK, SuccessResult(true))
@@ -54,7 +54,7 @@ func Update(context *gin.Context) {
 	err = blog.UpdateBlog()
 	if err != nil {
 		log.Printf("update blog error: %s\n", err.Error())
-		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "系统错误"))
+		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, err.Error()))
 		return
 	}
 	context.JSON(http.StatusOK, SuccessResult(true))
@@ -71,11 +71,11 @@ func GetBlog(context *gin.Context) {
 
 	id := context.Query("id")
 	if id == "" {
-		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "ID不能为空"))
+		context.JSON(http.StatusOK, ErrorResult(StatusBadRequest, "ID不能为空"))
 	} else {
 		i, e := strconv.Atoi(id)
 		if e != nil {
-			context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "参数错误"))
+			context.JSON(http.StatusOK, ErrorResult(StatusBadRequest, "参数错误"))
 		} else {
 			blog, err := server.GetBlog(i)
 			if err != nil {

@@ -1,68 +1,73 @@
 package common
 
 import (
+	"github.com/zavier/blog-admin-backend/constants"
 	"github.com/zavier/blog-admin-backend/util"
 	"log"
 	"os"
 	"strconv"
 )
 
-const indexFile = "index"
-
 // 初始化博客的索引
-func InitIndex(index string) {
+func InitIndex(index string) error {
 	log.Printf("init index %s\n", index)
-	exists := util.Exists(indexFile)
-	if exists {
-		err := os.Remove(indexFile)
-		if err != nil {
-			log.Fatal("remove file error", err)
+	exists, err := util.Exists(constants.IndexFile)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		if _, e := os.Create(constants.IndexFile); e != nil {
+			return e
 		}
 	}
 
-	file, e := os.Create(indexFile)
+	file, e := os.OpenFile(constants.IndexFile, os.O_WRONLY|os.O_TRUNC, 777)
 	if e != nil {
-		log.Fatal("create index file Error", e)
+		return e
 	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Fatal("close file error")
+		}
+	}()
 
-	file, e = os.OpenFile(indexFile, os.O_RDWR, 777)
-	if e != nil {
-		log.Fatal("open index file Error", e)
+	if _, e = file.WriteString(index); e != nil {
+		return e
 	}
-	defer file.Close()
-	_, e = file.WriteString(index)
-	if e != nil {
-		log.Fatal("write index file Error", e)
-	}
+	return nil
 }
 
 // 获取并生生下一个索引值
-func GetAndIncrIndex() int {
-	file, e := os.OpenFile(indexFile, os.O_RDWR, 777)
+func GetAndIncrIndex() (index int, e error) {
+	file, e := os.OpenFile(constants.IndexFile, os.O_RDWR, 777)
 	if e != nil {
-		log.Fatal("open index file Error", e)
+		return 0, e
 	}
-	defer file.Close()
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			log.Fatal("close file error")
+		}
+	}()
 
 	// 读取索引并加1
 	buffer := make([]byte, 10)
 	var n int
 	n, e = file.Read(buffer)
 	if e != nil {
-		log.Fatal("read index file error", e)
+		return 0, e
 	}
 	number, e := strconv.Atoi(string(buffer[:n]))
 	if e != nil {
-		log.Fatal("atoi error", e)
+		return 0, e
 	}
 	newNumber := strconv.Itoa(number + 1)
 
 	// 清空数据，重新写入
-	_, e = file.WriteAt([]byte(newNumber), 0)
-	if e != nil {
-		log.Fatal("write index file error", e)
+	if _, e = file.WriteAt([]byte(newNumber), 0); e != nil {
+		return 0, e
 	}
 
 	log.Printf("write new index:%s success\n", newNumber)
-	return number + 1
+	return number + 1, nil
 }
