@@ -70,7 +70,7 @@ func prepareData() error {
 	return nil
 }
 
-func isExistBlogTitle(title string) (bool, error) {
+func isExistBlogTitle(blog Blog) (bool, error) {
 	blogList, e := BlogList()
 	if e != nil {
 		return true, e
@@ -80,7 +80,7 @@ func isExistBlogTitle(title string) (bool, error) {
 	}
 
 	for _, b := range blogList {
-		if b.Title == title {
+		if b.Title == blog.Title && b.Author == blog.Author {
 			return true, nil
 		}
 	}
@@ -92,7 +92,7 @@ func (blog *Blog) SaveBlog() error {
 	// 创建要保存的文件
 	fileName := common.Random24NumberString() + ".md"
 	filePath := common.BlogPath + "/" + fileName
-	exist, e := isExistBlogTitle(blog.Title)
+	exist, e := isExistBlogTitle(*blog)
 	if e != nil {
 		return e
 	}

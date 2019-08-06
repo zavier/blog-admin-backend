@@ -16,10 +16,18 @@ tags: ${tags}
 ---
 `
 
-// 全部发布
+// 全部发布(会清空之前内容)
 func HexoDeployAll(username string) error {
 	sourcePath := os.Getenv("SOURCE_PATH")
 	log.Printf("hexo source path: %s\n", sourcePath)
+	err := os.RemoveAll(sourcePath)
+	if err != nil {
+		return err
+	}
+	err = os.MkdirAll(sourcePath, 777)
+	if err != nil {
+		return err
+	}
 
 	// 遍历所有博客，拷贝文件
 	baseBlogList, err := BlogList()
