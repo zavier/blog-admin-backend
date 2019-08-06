@@ -79,7 +79,6 @@ func hasExistUserName(username string) (bool, error) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		namePwdPair := scanner.Text()
-		log.Printf("read pwd context:%s\n", namePwdPair)
 		namePwd := strings.Split(namePwdPair, ":")
 		if namePwd[0] == base64.StdEncoding.EncodeToString([]byte(username)) {
 			return true, nil

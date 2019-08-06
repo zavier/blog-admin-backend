@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -285,7 +286,6 @@ func DelBlog(id int) error {
 		}
 	}
 
-	log.Printf("blogs : %v\n", blogList)
 	if _, err := recordFile.Seek(0, 0); err != nil {
 		return err
 	}
@@ -322,6 +322,12 @@ func BlogList() ([]BlogBase, error) {
 			return nil, e
 		}
 		blogList = append(blogList, blogBase)
+	}
+	// 按照ID倒序
+	if len(blogList) > 0 {
+		sort.Slice(blogList, func(i, j int) bool {
+			return blogList[i].Id > blogList[j].Id
+		})
 	}
 	return blogList, nil
 }
