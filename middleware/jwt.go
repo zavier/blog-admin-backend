@@ -3,7 +3,9 @@ package middleware
 import (
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/zavier/blog-admin-backend/constants"
 	"github.com/zavier/blog-admin-backend/handler"
+	"github.com/zavier/blog-admin-backend/server"
 	"log"
 	"net/http"
 	"time"
@@ -21,12 +23,12 @@ jti (JWT ID)：编号
 func JwtMiddleware() *jwt.GinJWTMiddleware {
 	authMiddleware, err := jwt.New(&jwt.GinJWTMiddleware{
 		Realm:       "login",
-		Key:         []byte("secret key"),
-		Timeout:     time.Hour,
+		Key:         []byte(constants.JwtSecretKey),
+		Timeout:     time.Hour * 2,
 		MaxRefresh:  time.Hour,
-		IdentityKey: "id",
+		IdentityKey: "aud",
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
-			if v, ok := data.(*handler.User); ok {
+			if v, ok := data.(*server.User); ok {
 				return jwt.MapClaims{
 					"aud": v.Name,
 				}
@@ -35,25 +37,25 @@ func JwtMiddleware() *jwt.GinJWTMiddleware {
 		},
 		IdentityHandler: func(c *gin.Context) interface{} {
 			claims := jwt.ExtractClaims(c)
-			return &handler.User{
+			return &server.User{
 				Name: claims["aud"].(string),
 			}
 		},
 		Authenticator: func(c *gin.Context) (interface{}, error) {
-			var loginVals handler.User
-			if err := c.ShouldBind(&loginVals); err != nil {
+			var user server.User
+			if err := c.ShouldBind(&user); err != nil {
 				return "", jwt.ErrMissingLoginValues
 			}
-			userName := loginVals.Name
-			password := loginVals.Password
-
-			if (userName == "admin" && password == "admin") || (userName == "test" && password == "test") {
-				return &handler.User{
-					Name: userName,
-				}, nil
+			correct, ex := user.CheckPassword()
+			if ex != nil {
+				return nil, ex
 			}
 
-			return nil, jwt.ErrFailedAuthentication
+			if correct {
+				return &user, nil
+			} else {
+				return nil, jwt.ErrFailedAuthentication
+			}
 		},
 		LoginResponse: func(c *gin.Context, code int, message string, t time.Time) {
 			c.JSON(http.StatusOK, handler.SuccessResult(message))
@@ -64,7 +66,7 @@ func JwtMiddleware() *jwt.GinJWTMiddleware {
 		// TokenLookup is a string in the form of "<source>:<name>" that is used
 		// to extract token from the request.
 		// Optional. Default value "header:Authorization".
-		// Possible values:
+		// Possible values:g
 		// - "header:<name>"
 		// - "query:<name>"
 		// - "cookie:<name>"

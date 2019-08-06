@@ -37,8 +37,8 @@ func (user User) checkUserInfoParam() bool {
 	return true
 }
 
-// 注册
-func Register(user User) (bool, error) {
+// 保存用户
+func (user User) Save() (bool, error) {
 	if !user.checkUserInfoParam() {
 		return false, errors.New("参数错误，请检查用户名和密码长度")
 	}
@@ -48,7 +48,7 @@ func Register(user User) (bool, error) {
 			return false, err
 		}
 	}
-	hasRegistered, err := hasRegister(user.Name)
+	hasRegistered, err := hasExistUserName(user.Name)
 	if err != nil {
 		return false, err
 	}
@@ -77,8 +77,8 @@ func Register(user User) (bool, error) {
 	return true, nil
 }
 
-// 判断是否已经注册过
-func hasRegister(username string) (bool, error) {
+// 判断用户名称是否存在
+func hasExistUserName(username string) (bool, error) {
 	file, err := os.OpenFile(constants.PwdFilePath, os.O_RDONLY, 777)
 	if err != nil {
 		log.Printf("open pwd file error: %s\n", err.Error())
@@ -103,11 +103,11 @@ func hasRegister(username string) (bool, error) {
 	return false, nil
 }
 
-// 登陆
-func Login(user User) (token string, ex error) {
+// 登录(判断用户名和密码是否正确)
+func (user User) CheckPassword() (correct bool, ex error) {
 	file, err := os.OpenFile(constants.PwdFilePath, os.O_RDONLY, 777)
 	if err != nil {
-		return "", err
+		return false, err
 	}
 	defer func() {
 		e := file.Close()
@@ -119,19 +119,18 @@ func Login(user User) (token string, ex error) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		namePwdPair := scanner.Text()
-		log.Printf("read pwd context:%s\n", namePwdPair)
 		namePwd := strings.Split(namePwdPair, ":")
 		if namePwd[0] == user.Name {
 			hash := sha256.New()
 			hash.Write([]byte(user.Password))
 			shaPwd := hex.EncodeToString(hash.Sum(nil))
 			if namePwd[1] == shaPwd {
-				return namePwd[1], nil
+				return true, nil
 			} else {
-				return "", errors.New("用户名或密码错误")
+				return false, errors.New("用户名或密码错误")
 			}
 		}
 	}
 	log.Printf("do not have this user:%s\n", user.Name)
-	return "", errors.New("用户名或密码错误")
+	return false, errors.New("用户名或密码错误")
 }
