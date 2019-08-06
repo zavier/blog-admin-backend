@@ -1,6 +1,7 @@
 package handler
 
 import (
+	bytes2 "bytes"
 	"github.com/gin-gonic/gin"
 	"github.com/zavier/blog-admin-backend/common"
 	"github.com/zavier/blog-admin-backend/server"
@@ -12,7 +13,7 @@ import (
 )
 
 // 博客保存
-func Save(context *gin.Context) {
+func SaveBlog(context *gin.Context) {
 	defer func() {
 		if x := recover(); x != nil {
 			log.Printf("save error")
@@ -42,7 +43,7 @@ func Save(context *gin.Context) {
 }
 
 // 更新博客
-func Update(context *gin.Context) {
+func UpdateBlog(context *gin.Context) {
 	defer func() {
 		if x := recover(); x != nil {
 			log.Printf("save error")
@@ -127,29 +128,32 @@ func GetBlog(context *gin.Context) {
 	id := context.Query("id")
 	if id == "" {
 		context.JSON(http.StatusOK, common.ErrorResult(common.StatusBadRequest, "ID不能为空"))
-	} else {
-		i, e := strconv.Atoi(id)
-		if e != nil {
-			context.JSON(http.StatusOK, common.ErrorResult(common.StatusBadRequest, "参数错误"))
-		} else {
-			blog, err := server.GetBlog(i)
-			if err != nil {
-				context.JSON(http.StatusOK, common.ErrorResult(common.StatusInternalServerError, err.Error()))
-			} else {
-				author := blog.Author
-				if author != context.GetString(common.JwtIdentityKey) {
-					context.JSON(http.StatusOK, common.ErrorResult(common.StatusUnauthorized, "无权访问此博客"))
-				} else {
-					blog.Location = ""
-					context.JSON(http.StatusOK, common.SuccessResult(blog))
-				}
-			}
-		}
+		return
 	}
+	i, e := strconv.Atoi(id)
+	if e != nil {
+		context.JSON(http.StatusOK, common.ErrorResult(common.StatusBadRequest, "参数错误"))
+		return
+	}
+
+	blog, err := server.GetBlog(i)
+	if err != nil {
+		context.JSON(http.StatusOK, common.ErrorResult(common.StatusInternalServerError, err.Error()))
+		return
+	}
+	author := blog.Author
+	if author != context.GetString(common.JwtIdentityKey) {
+		context.JSON(http.StatusOK, common.ErrorResult(common.StatusUnauthorized, "无权访问此博客"))
+		return
+	}
+
+	blog.Location = ""
+	context.JSON(http.StatusOK, common.SuccessResult(blog))
+
 }
 
 // 查询博客列表
-func List(context *gin.Context) {
+func ListBlog(context *gin.Context) {
 	defer func() {
 		if x := recover(); x != nil {
 			log.Printf("listBlog error")
@@ -190,7 +194,7 @@ func DeployAll(context *gin.Context) {
 }
 
 // 上传博客文件
-func Upload(context *gin.Context) {
+func UploadBlog(context *gin.Context) {
 	defer func() {
 		if x := recover(); x != nil {
 			log.Printf("upload error")
@@ -242,4 +246,57 @@ func Upload(context *gin.Context) {
 	} else {
 		context.JSON(http.StatusOK, common.SuccessResult(true))
 	}
+}
+
+// 下载博客
+func DownloadBlog(context *gin.Context) {
+	defer func() {
+		if x := recover(); x != nil {
+			log.Printf("DownloadBlog error")
+			context.JSON(http.StatusOK, common.ErrorResult(common.StatusInternalServerError, "系统错误"))
+		}
+	}()
+
+	id := context.Query("id")
+	if id == "" {
+		context.JSON(http.StatusOK, common.ErrorResult(common.StatusBadRequest, "ID不能为空"))
+		return
+	}
+	i, e := strconv.Atoi(id)
+	if e != nil {
+		context.JSON(http.StatusOK, common.ErrorResult(common.StatusBadRequest, "参数错误"))
+		return
+	}
+
+	blog, err := server.GetBlog(i)
+	if err != nil {
+		context.JSON(http.StatusOK, common.ErrorResult(common.StatusInternalServerError, err.Error()))
+		return
+	}
+	author := blog.Author
+	if author != context.GetString(common.JwtIdentityKey) {
+		context.JSON(http.StatusOK, common.ErrorResult(common.StatusUnauthorized, "无权下载此博客"))
+		return
+	}
+
+	fileLocation := blog.Location
+	blogTitle := blog.Title
+	if fileLocation != "" {
+		bytes, e := ioutil.ReadFile(fileLocation)
+		if e != nil {
+			context.JSON(http.StatusOK, common.ErrorResult(common.StatusInternalServerError, e.Error()))
+			return
+		}
+		reader := bytes2.NewReader(bytes)
+		contentLength := int64(reader.Len())
+		contentType := "text/markdown"
+		extraHeaders := map[string]string{
+			"Content-Disposition": "attachment; filename=\"" + blogTitle + ".md" + "\"",
+		}
+		context.DataFromReader(http.StatusOK, contentLength, contentType, reader, extraHeaders)
+		return
+	}
+
+	context.JSON(http.StatusOK, common.ErrorResult(common.StatusInternalServerError, "下载文件错误"))
+
 }

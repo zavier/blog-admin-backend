@@ -3,6 +3,7 @@ package server
 import (
 	"bufio"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"github.com/zavier/blog-admin-backend/common"
@@ -12,45 +13,24 @@ import (
 )
 
 type User struct {
-	Name     string `json:"name" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Name     string `json:"name" binding:"required,min=2,max=8"`
+	Password string `json:"password" binding:"required,min=5,max=12"`
 }
 
-// 参数校验
-func (user *User) checkUserInfoParam() bool {
-	var nameLen = len(user.Name)
-	if nameLen < 2 || nameLen > 8 {
-		log.Printf("username len:%d is invalid\n", nameLen)
-		return false
+func init() {
+	exists, e := common.Exists(common.PwdFilePath)
+	if e != nil {
+		log.Fatal("exist pwd file error", e)
 	}
-	if strings.Contains(user.Name, ":") {
-		log.Printf("username len:%d is invalid\n", nameLen)
-		return false
+	if !exists {
+		if _, err := os.Create(common.PwdFilePath); err != nil {
+			log.Fatal("create pwd file error", err)
+		}
 	}
-
-	pwdLen := len(user.Password)
-	if pwdLen < 5 || pwdLen > 12 {
-		log.Printf("userpwd len:%d is invalid", pwdLen)
-		return false
-	}
-	return true
 }
 
 // 保存用户
 func (user *User) Save() (bool, error) {
-	if !user.checkUserInfoParam() {
-		return false, errors.New("参数错误，请检查用户名和密码长度")
-	}
-	exists, e := common.Exists(common.PwdFilePath)
-	if e != nil {
-		return false, e
-	}
-	if !exists {
-		_, err := os.Create(common.PwdFilePath)
-		if err != nil {
-			return false, err
-		}
-	}
 	hasRegistered, err := hasExistUserName(user.Name)
 	if err != nil {
 		return false, err
@@ -70,10 +50,13 @@ func (user *User) Save() (bool, error) {
 		}
 	}()
 
+	base64Name := base64.StdEncoding.EncodeToString([]byte(user.Name))
+
 	hash := sha256.New()
 	hash.Write([]byte(user.Password))
 	shaPwd := hex.EncodeToString(hash.Sum(nil))
-	if _, err = file.WriteString(user.Name + ":" + shaPwd + "\n"); err != nil {
+
+	if _, err = file.WriteString(base64Name + ":" + shaPwd + "\n"); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -98,7 +81,7 @@ func hasExistUserName(username string) (bool, error) {
 		namePwdPair := scanner.Text()
 		log.Printf("read pwd context:%s\n", namePwdPair)
 		namePwd := strings.Split(namePwdPair, ":")
-		if namePwd[0] == username {
+		if namePwd[0] == base64.StdEncoding.EncodeToString([]byte(username)) {
 			return true, nil
 		}
 	}
@@ -122,7 +105,7 @@ func (user *User) CheckPassword() (correct bool, ex error) {
 	for scanner.Scan() {
 		namePwdPair := scanner.Text()
 		namePwd := strings.Split(namePwdPair, ":")
-		if namePwd[0] == user.Name {
+		if namePwd[0] == base64.StdEncoding.EncodeToString([]byte(user.Name)) {
 			hash := sha256.New()
 			hash.Write([]byte(user.Password))
 			shaPwd := hex.EncodeToString(hash.Sum(nil))

@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+const baseHeader = "access-control-allow-origin, access-control-allow-headers, authorization, x-requested-with, content-type"
+
 func Cors() gin.HandlerFunc {
 	return func(context *gin.Context) {
 		origin := context.Request.Header.Get("Origin")
@@ -17,9 +19,9 @@ func Cors() gin.HandlerFunc {
 		}
 		headerStr := strings.Join(headerKeys, ", ")
 		if headerStr != "" {
-			headerStr = fmt.Sprintf("access-control-allow-origin, access-control-allow-headers, %s", headerStr)
+			headerStr = fmt.Sprintf(baseHeader+", %s", headerStr)
 		} else {
-			headerStr = "access-control-allow-origin, access-control-allow-headers"
+			headerStr = baseHeader
 		}
 		if origin != "" {
 			// 表示接受的域名

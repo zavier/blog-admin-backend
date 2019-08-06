@@ -8,7 +8,6 @@ import (
 
 // 初始化博客的索引
 func InitBlogIndex(index string) error {
-	log.Printf("init index %s\n", index)
 	exists, err := Exists(IndexFile)
 	if err != nil {
 		return err
@@ -35,6 +34,7 @@ func InitBlogIndex(index string) error {
 	if _, e = file.WriteString(index); e != nil {
 		return e
 	}
+	log.Printf("init index %s\n", index)
 	return nil
 }
 

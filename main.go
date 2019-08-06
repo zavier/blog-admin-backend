@@ -32,12 +32,13 @@ func main() {
 
 	// 博客相关
 	blogRouter := router.Group("/blog")
-	blogRouter.POST("/save", handler.Save)
-	blogRouter.POST("/update", handler.Update)
-	blogRouter.GET("/list", handler.List)
+	blogRouter.POST("/save", handler.SaveBlog)
+	blogRouter.POST("/update", handler.UpdateBlog)
+	blogRouter.GET("/list", handler.ListBlog)
 	blogRouter.GET("/getBlog", handler.GetBlog)
 	blogRouter.GET("/delBlog", handler.DelBlog)
-	blogRouter.POST("/upload", handler.Upload)
+	blogRouter.POST("/upload", handler.UploadBlog)
+	blogRouter.GET("/download", handler.DownloadBlog)
 	blogRouter.POST("/deployAll", handler.DeployAll)
 
 	err := router.Run(":8081")
