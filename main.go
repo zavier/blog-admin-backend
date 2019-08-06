@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/zavier/blog-admin-backend/common"
 	"github.com/zavier/blog-admin-backend/handler"
 	"github.com/zavier/blog-admin-backend/middleware"
 	"log"
@@ -14,6 +15,8 @@ func init() {
 
 func main() {
 	router := gin.Default()
+	// 允许跨越访问
+	router.Use(middleware.Cors())
 
 	// 登陆相关
 	userRouter := router.Group("/user")
@@ -24,7 +27,7 @@ func main() {
 	router.Use(middleware.JwtMiddleware().MiddlewareFunc())
 	// 校验是否登录
 	router.GET("/check/isLogin", func(context *gin.Context) {
-		context.JSON(http.StatusOK, handler.SuccessResult(true))
+		context.JSON(http.StatusOK, common.SuccessResult(true))
 	})
 
 	// 博客相关

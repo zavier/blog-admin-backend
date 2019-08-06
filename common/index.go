@@ -1,16 +1,15 @@
 package common
 
 import (
-	"github.com/zavier/blog-admin-backend/util"
 	"log"
 	"os"
 	"strconv"
 )
 
 // 初始化博客的索引
-func InitIndex(index string) error {
+func InitBlogIndex(index string) error {
 	log.Printf("init index %s\n", index)
-	exists, err := util.Exists(IndexFile)
+	exists, err := Exists(IndexFile)
 	if err != nil {
 		return err
 	}
@@ -40,7 +39,7 @@ func InitIndex(index string) error {
 }
 
 // 获取并生生下一个索引值
-func GetAndIncrIndex() (index int, e error) {
+func GetAndIncrBlogIndex() (index int, e error) {
 	file, e := os.OpenFile(IndexFile, os.O_RDWR, 777)
 	if e != nil {
 		return 0, e

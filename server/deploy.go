@@ -13,7 +13,8 @@ var hexoHeader = `---
 title: ${title}
 date: ${date}
 tags: ${tags}
----`
+---
+`
 
 // 全部发布
 func HexoDeployAll(username string) error {

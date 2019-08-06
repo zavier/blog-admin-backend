@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"github.com/zavier/blog-admin-backend/common"
-	"github.com/zavier/blog-admin-backend/util"
 	"log"
 	"os"
 	"strings"
@@ -18,7 +17,7 @@ type User struct {
 }
 
 // 参数校验
-func (user User) checkUserInfoParam() bool {
+func (user *User) checkUserInfoParam() bool {
 	var nameLen = len(user.Name)
 	if nameLen < 2 || nameLen > 8 {
 		log.Printf("username len:%d is invalid\n", nameLen)
@@ -38,11 +37,11 @@ func (user User) checkUserInfoParam() bool {
 }
 
 // 保存用户
-func (user User) Save() (bool, error) {
+func (user *User) Save() (bool, error) {
 	if !user.checkUserInfoParam() {
 		return false, errors.New("参数错误，请检查用户名和密码长度")
 	}
-	exists, e := util.Exists(common.PwdFilePath)
+	exists, e := common.Exists(common.PwdFilePath)
 	if e != nil {
 		return false, e
 	}
@@ -107,7 +106,7 @@ func hasExistUserName(username string) (bool, error) {
 }
 
 // 登录(判断用户名和密码是否正确)
-func (user User) CheckPassword() (correct bool, ex error) {
+func (user *User) CheckPassword() (correct bool, ex error) {
 	file, err := os.OpenFile(common.PwdFilePath, os.O_RDONLY, 777)
 	if err != nil {
 		return false, err

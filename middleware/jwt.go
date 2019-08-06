@@ -4,7 +4,6 @@ import (
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/zavier/blog-admin-backend/common"
-	"github.com/zavier/blog-admin-backend/handler"
 	"github.com/zavier/blog-admin-backend/server"
 	"log"
 	"net/http"
@@ -58,11 +57,11 @@ func init() {
 			}
 		},
 		LoginResponse: func(c *gin.Context, code int, message string, t time.Time) {
-			c.JSON(http.StatusOK, handler.SuccessResult(message))
+			c.JSON(http.StatusOK, common.SuccessResult(message))
 		},
 		Unauthorized: func(c *gin.Context, code int, message string) {
 			log.Printf("Unauthorized code:%d message%s\n", code, message)
-			c.JSON(http.StatusOK, handler.ErrorResult(handler.StatusUnauthorized, "登录失效"))
+			c.JSON(http.StatusOK, common.ErrorResult(common.StatusUnauthorized, "登录失效"))
 		},
 		// TokenLookup is a string in the form of "<source>:<name>" that is used
 		// to extract token from the request.

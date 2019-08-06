@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/zavier/blog-admin-backend/common"
-	"github.com/zavier/blog-admin-backend/util"
 	"io/ioutil"
 	"log"
 	"os"
@@ -37,15 +36,10 @@ type Blog struct {
 	Content string `form:"content" json:"content" binding:"required"`
 }
 
-func (blog Blog) ToString() string {
-	bytes, _ := json.Marshal(blog)
-	return string(bytes)
-}
-
 // 初始化准备数据
 func prepareData() error {
 	// 初始化博客路径
-	exist, e := util.Exists(common.BlogPath)
+	exist, e := common.Exists(common.BlogPath)
 	if e != nil {
 		return e
 	}
@@ -58,7 +52,7 @@ func prepareData() error {
 	}
 
 	// 初始化博客管理文件
-	exist, e = util.Exists(common.BlogManageFileName)
+	exist, e = common.Exists(common.BlogManageFileName)
 	if e != nil {
 		return e
 	}
@@ -70,7 +64,7 @@ func prepareData() error {
 	}
 
 	// 初始化索引
-	if e = common.InitIndex(strconv.Itoa(0)); e != nil {
+	if e = common.InitBlogIndex(strconv.Itoa(0)); e != nil {
 		return e
 	}
 	return nil
@@ -94,7 +88,7 @@ func isExistBlogTitle(title string) (bool, error) {
 }
 
 // 保存博客
-func (blog Blog) SaveBlog() error {
+func (blog *Blog) SaveBlog() error {
 	// 创建要保存的文件
 	fileName := common.Random24NumberString() + ".md"
 	filePath := common.BlogPath + "/" + fileName
@@ -135,7 +129,7 @@ func (blog Blog) SaveBlog() error {
 			log.Fatal("close file error")
 		}
 	}()
-	blog.Id, err = common.GetAndIncrIndex()
+	blog.Id, err = common.GetAndIncrBlogIndex()
 	if err != nil {
 		return err
 	}
@@ -170,7 +164,7 @@ func (blog Blog) SaveBlog() error {
 }
 
 // 更新博客
-func (blog Blog) UpdateBlog() error {
+func (blog *Blog) UpdateBlog() error {
 	// 更新记录信息
 	recordFile, err := os.OpenFile(common.BlogManageFileName, os.O_RDWR, 0777)
 	if err != nil {
