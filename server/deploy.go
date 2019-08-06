@@ -89,7 +89,7 @@ func doDeploy() {
 		}
 	}()
 	// 运行命令
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Start(); err != nil {
 		log.Fatal("cmd start error", err)
 	}
 	res, err := ioutil.ReadAll(stdout)
