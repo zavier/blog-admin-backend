@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 )
 
 func init() {
@@ -86,7 +87,7 @@ func (blog Blog) SaveBlog() error {
 	}
 	if exist {
 		log.Printf("filePath:%s has existed", filePath)
-		return errors.New("文件路径已存在")
+		return errors.New("博客名称已存在")
 	}
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -126,6 +127,8 @@ func (blog Blog) SaveBlog() error {
 		return err
 	}
 	blog.Location = path + "/" + fileName
+	blog.CreateTime = time.Now().Format("2006-01-02 15:04:05")
+	blog.UpdateTime = time.Now().Format("2006-01-02 15:04:05")
 
 	blogBase := BlogBase{
 		Id:         blog.Id,
@@ -151,39 +154,6 @@ func (blog Blog) SaveBlog() error {
 
 // 更新博客
 func (blog Blog) UpdateBlog() error {
-	var blogId = blog.Id
-	if blogId <= 0 {
-		return errors.New("ID不能小于等于0")
-	}
-
-	// 保存文件
-	var fileName = blog.Title + ".md"
-	filePath := common.BlogPath + "/" + fileName
-	exists, e := util.Exists(filePath)
-	if e != nil {
-		return e
-	}
-	if !exists {
-		log.Printf("filePath:%s does not exist, create.", filePath)
-		if _, err := os.Create(filePath); err != nil {
-			return err
-		}
-	}
-	blogFile, err := os.OpenFile(filePath, os.O_RDWR|os.O_TRUNC, 0777)
-	if err != nil {
-		log.Printf("open file error: %s\n", err.Error())
-		return err
-	}
-	defer func() {
-		if err := blogFile.Close(); err != nil {
-			log.Fatal("close file error")
-		}
-	}()
-	if _, err = blogFile.WriteString(blog.Content); err != nil {
-		log.Printf("write file error:%s\n", err.Error())
-		return err
-	}
-
 	// 更新记录信息
 	recordFile, err := os.OpenFile(common.BlogManageFileName, os.O_RDWR, 0777)
 	if err != nil {
@@ -196,6 +166,7 @@ func (blog Blog) UpdateBlog() error {
 	}()
 	scanner := bufio.NewScanner(recordFile)
 	var blogList = make([]BlogBase, 0)
+
 	for scanner.Scan() {
 		blogJson := scanner.Text()
 		var b BlogBase
@@ -203,15 +174,24 @@ func (blog Blog) UpdateBlog() error {
 			return err
 		}
 
-		if blogId == b.Id {
-			path, err := filepath.Abs(filepath.Dir(filePath))
+		if blog.Id == b.Id {
+			// 找到文件进行写入
+			location := b.Location
+			blogFile, err := os.OpenFile(location, os.O_WRONLY|os.O_TRUNC, 0777)
 			if err != nil {
-				log.Fatal("get abs path error", err)
+				log.Printf("open file error: %s\n", err.Error())
+				return err
 			}
-			b.Location = path + "/" + fileName
+			defer blogFile.Close()
+
+			if _, err = blogFile.WriteString(blog.Content); err != nil {
+				log.Printf("write file error:%s\n", err.Error())
+				return err
+			}
+
+			// 更新信息
 			b.Title = blog.Title
-			b.CreateTime = blog.CreateTime
-			b.UpdateTime = blog.UpdateTime
+			b.UpdateTime = time.Now().Format("2006-01-02 15:04:05")
 			b.Author = blog.Author
 			b.Categories = blog.Categories
 		}
@@ -219,7 +199,11 @@ func (blog Blog) UpdateBlog() error {
 	}
 
 	log.Printf("blogs : %v\n", blogList)
-	recordFile, err = os.OpenFile(common.BlogManageFileName, os.O_WRONLY|os.O_TRUNC, 0777)
+	if _, err := recordFile.Seek(0, 0); err != nil {
+		return err
+	}
+
+	err = recordFile.Truncate(0)
 	if err != nil {
 		return err
 	}
@@ -262,6 +246,53 @@ func GetBlog(id int) (Blog, error) {
 		}
 	}
 	return Blog{}, errors.New("此博客不存在")
+}
+
+// 删除博客
+func DelBlog(id int) error {
+	// 只删除记录信息
+	recordFile, err := os.OpenFile(common.BlogManageFileName, os.O_RDWR, 0777)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := recordFile.Close(); err != nil {
+			log.Fatal("close file error")
+		}
+	}()
+	scanner := bufio.NewScanner(recordFile)
+	var blogList = make([]BlogBase, 0)
+	for scanner.Scan() {
+		blogJson := scanner.Text()
+		var b BlogBase
+		if err := json.Unmarshal([]byte(blogJson), &b); err != nil {
+			return err
+		}
+
+		if id != b.Id {
+			blogList = append(blogList, b)
+		}
+	}
+
+	log.Printf("blogs : %v\n", blogList)
+	if _, err := recordFile.Seek(0, 0); err != nil {
+		return err
+	}
+	err = recordFile.Truncate(0)
+	if err != nil {
+		return err
+	}
+	for _, blogBase := range blogList {
+		bytes, err := json.Marshal(blogBase)
+		if err != nil {
+			return err
+		}
+		if _, err = recordFile.WriteString(string(bytes) + "\n"); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // 查询博客列表

@@ -33,7 +33,8 @@ func main() {
 	blogRouter.POST("/update", handler.Update)
 	blogRouter.GET("/list", handler.List)
 	blogRouter.GET("/getBlog", handler.GetBlog)
-	//blogRouter.POST("/upload", handler.Upload)
+	blogRouter.GET("/delBlog", handler.DelBlog)
+	blogRouter.POST("/upload", handler.Upload)
 	blogRouter.POST("/deployAll", handler.DeployAll)
 
 	err := router.Run(":8081")
