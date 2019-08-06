@@ -1,7 +1,6 @@
 package common
 
 import (
-	"github.com/zavier/blog-admin-backend/constants"
 	"github.com/zavier/blog-admin-backend/util"
 	"log"
 	"os"
@@ -11,17 +10,20 @@ import (
 // 初始化博客的索引
 func InitIndex(index string) error {
 	log.Printf("init index %s\n", index)
-	exists, err := util.Exists(constants.IndexFile)
+	exists, err := util.Exists(IndexFile)
 	if err != nil {
 		return err
 	}
 	if !exists {
-		if _, e := os.Create(constants.IndexFile); e != nil {
+		if _, e := os.Create(IndexFile); e != nil {
 			return e
 		}
+	} else {
+		// 存在则不动
+		return nil
 	}
 
-	file, e := os.OpenFile(constants.IndexFile, os.O_WRONLY|os.O_TRUNC, 777)
+	file, e := os.OpenFile(IndexFile, os.O_WRONLY|os.O_TRUNC, 777)
 	if e != nil {
 		return e
 	}
@@ -39,7 +41,7 @@ func InitIndex(index string) error {
 
 // 获取并生生下一个索引值
 func GetAndIncrIndex() (index int, e error) {
-	file, e := os.OpenFile(constants.IndexFile, os.O_RDWR, 777)
+	file, e := os.OpenFile(IndexFile, os.O_RDWR, 777)
 	if e != nil {
 		return 0, e
 	}

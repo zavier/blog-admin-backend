@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/zavier/blog-admin-backend/common"
-	"github.com/zavier/blog-admin-backend/constants"
 	"github.com/zavier/blog-admin-backend/util"
 	"io/ioutil"
 	"log"
@@ -16,8 +15,8 @@ import (
 
 func init() {
 	log.SetFlags(log.Ldate | log.Lshortfile)
-	if err := SyncBlogJsonFile(); err != nil {
-		log.Fatal("SyncBlogJsonFile error", err)
+	if err := prepareData(); err != nil {
+		log.Fatal("prepareData error", err)
 	}
 
 }
@@ -34,7 +33,7 @@ type BlogBase struct {
 
 type Blog struct {
 	BlogBase
-	Context string `form:"context" json:"context" binding:"required"`
+	Content string `form:"content" json:"content" binding:"required"`
 }
 
 func (blog Blog) ToString() string {
@@ -42,81 +41,35 @@ func (blog Blog) ToString() string {
 	return string(bytes)
 }
 
-// 同步博客json文件及博客索引
-func SyncBlogJsonFile() error {
-	// 初始化创建路径及必须文件
-	exist, e := util.Exists(constants.BlogPath)
+// 初始化准备数据
+func prepareData() error {
+	// 初始化博客路径
+	exist, e := util.Exists(common.BlogPath)
 	if e != nil {
 		return e
 	}
 	if !exist {
-		err := os.Mkdir(constants.BlogPath, 0777)
+		err := os.Mkdir(common.BlogPath, 0777)
 		if err != nil {
 			log.Printf("create blog path error:%s\n", err.Error())
 			return err
 		}
 	}
 
-	firstStart := false
-
-	exist, e = util.Exists(constants.BlogJsonFileName)
+	// 初始化博客管理文件
+	exist, e = util.Exists(common.BlogManageFileName)
 	if e != nil {
 		return e
 	}
 	if !exist {
-		_, err := os.Create(constants.BlogJsonFileName)
-		if err != nil {
-			return err
-		}
-		firstStart = true
-	}
-	jsonFile, err := os.OpenFile(constants.BlogJsonFileName, os.O_RDWR, 777)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := jsonFile.Close(); err != nil {
-			log.Fatal("close file error")
-		}
-	}()
-
-	// 是否是第一次启动，第一次启动时才需要同步文件夹中的内容
-	// 否则直接返回，不进行后续操作
-	if !firstStart {
-		return nil
-	}
-
-	// 初始读取文件夹下所有文件
-	infos, err := ioutil.ReadDir(constants.BlogPath)
-	if err != nil {
-		return err
-	}
-	var index = 0
-	for _, file := range infos {
-		name := file.Name()
-		path, err := filepath.Abs(filepath.Dir(file.Name()))
-		if err != nil {
-			return err
-		}
-		index++
-		blogBase := BlogBase{
-			Id:       index,
-			Title:    name,
-			Location: path,
-		}
-		bytes, err := json.Marshal(blogBase)
-		if err != nil {
-			return err
-		}
-		context := string(bytes)
-		_, err = jsonFile.WriteString(context + "\n")
+		_, err := os.Create(common.BlogManageFileName)
 		if err != nil {
 			return err
 		}
 	}
 
 	// 初始化索引
-	if e = common.InitIndex(strconv.Itoa(index)); e != nil {
+	if e = common.InitIndex(strconv.Itoa(0)); e != nil {
 		return e
 	}
 	return nil
@@ -126,7 +79,7 @@ func SyncBlogJsonFile() error {
 func (blog Blog) SaveBlog() error {
 	// 创建要保存的文件
 	fileName := blog.Title + ".md"
-	filePath := constants.BlogPath + "/" + fileName
+	filePath := common.BlogPath + "/" + fileName
 	exist, e := util.Exists(filePath)
 	if e != nil {
 		return e
@@ -147,14 +100,14 @@ func (blog Blog) SaveBlog() error {
 	}()
 
 	// 文件写入
-	_, err = file.WriteString(blog.Context)
+	_, err = file.WriteString(blog.Content)
 	if err != nil {
 		log.Printf("write file error:%s\n", err.Error())
 		return err
 	}
 
 	// 保存记录信息
-	jsonFile, err := os.OpenFile(constants.BlogJsonFileName, os.O_WRONLY|os.O_APPEND, 0777)
+	jsonFile, err := os.OpenFile(common.BlogManageFileName, os.O_WRONLY|os.O_APPEND, 0777)
 	if err != nil {
 		return err
 	}
@@ -189,7 +142,7 @@ func (blog Blog) SaveBlog() error {
 		return err
 	}
 	context := string(bytes)
-	_, err = file.WriteString(context + "\n")
+	_, err = jsonFile.WriteString(context + "\n")
 	if err != nil {
 		return err
 	}
@@ -205,7 +158,7 @@ func (blog Blog) UpdateBlog() error {
 
 	// 保存文件
 	var fileName = blog.Title + ".md"
-	filePath := constants.BlogPath + "/" + fileName
+	filePath := common.BlogPath + "/" + fileName
 	exists, e := util.Exists(filePath)
 	if e != nil {
 		return e
@@ -226,13 +179,13 @@ func (blog Blog) UpdateBlog() error {
 			log.Fatal("close file error")
 		}
 	}()
-	if _, err = blogFile.WriteString(blog.Context); err != nil {
+	if _, err = blogFile.WriteString(blog.Content); err != nil {
 		log.Printf("write file error:%s\n", err.Error())
 		return err
 	}
 
 	// 更新记录信息
-	recordFile, err := os.OpenFile(constants.BlogJsonFileName, os.O_RDWR, 0777)
+	recordFile, err := os.OpenFile(common.BlogManageFileName, os.O_RDWR, 0777)
 	if err != nil {
 		return err
 	}
@@ -266,7 +219,7 @@ func (blog Blog) UpdateBlog() error {
 	}
 
 	log.Printf("blogs : %v\n", blogList)
-	recordFile, err = os.OpenFile(constants.BlogJsonFileName, os.O_WRONLY|os.O_TRUNC, 0777)
+	recordFile, err = os.OpenFile(common.BlogManageFileName, os.O_WRONLY|os.O_TRUNC, 0777)
 	if err != nil {
 		return err
 	}
@@ -303,7 +256,7 @@ func GetBlog(id int) (Blog, error) {
 			}
 			blog := Blog{
 				BlogBase: blogBase,
-				Context:  string(bytes),
+				Content:  string(bytes),
 			}
 			return blog, nil
 		}
@@ -313,7 +266,7 @@ func GetBlog(id int) (Blog, error) {
 
 // 查询博客列表
 func BlogList() ([]BlogBase, error) {
-	file, e := os.OpenFile(constants.BlogJsonFileName, os.O_RDONLY, 777)
+	file, e := os.OpenFile(common.BlogManageFileName, os.O_RDONLY, 777)
 	if e != nil {
 		return nil, e
 	}

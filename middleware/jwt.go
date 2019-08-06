@@ -3,7 +3,7 @@ package middleware
 import (
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
-	"github.com/zavier/blog-admin-backend/constants"
+	"github.com/zavier/blog-admin-backend/common"
 	"github.com/zavier/blog-admin-backend/handler"
 	"github.com/zavier/blog-admin-backend/server"
 	"log"
@@ -25,10 +25,10 @@ jti (JWT ID)：编号
 func init() {
 	middleWare, err := jwt.New(&jwt.GinJWTMiddleware{
 		Realm:       "login",
-		Key:         []byte(constants.JwtSecretKey),
+		Key:         []byte(common.JwtSecretKey),
 		Timeout:     time.Hour * 2,
 		MaxRefresh:  time.Hour,
-		IdentityKey: "aud",
+		IdentityKey: common.JwtIdentityKey,
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
 			if v, ok := data.(*server.User); ok {
 				return jwt.MapClaims{
@@ -39,9 +39,7 @@ func init() {
 		},
 		IdentityHandler: func(c *gin.Context) interface{} {
 			claims := jwt.ExtractClaims(c)
-			return &server.User{
-				Name: claims["aud"].(string),
-			}
+			return claims["aud"].(string)
 		},
 		Authenticator: func(c *gin.Context) (interface{}, error) {
 			var user server.User

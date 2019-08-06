@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/zavier/blog-admin-backend/constants"
+	"github.com/zavier/blog-admin-backend/common"
 	"github.com/zavier/blog-admin-backend/util"
 	"io/ioutil"
 	"log"
@@ -41,7 +41,7 @@ func HexoDeployAll() error {
 		blogMap[title+".md"] = b
 	}
 
-	infos, err := ioutil.ReadDir(constants.BlogPath)
+	infos, err := ioutil.ReadDir(common.BlogPath)
 	if err != nil {
 		return err
 	}

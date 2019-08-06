@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"github.com/zavier/blog-admin-backend/constants"
+	"github.com/zavier/blog-admin-backend/common"
 	"github.com/zavier/blog-admin-backend/util"
 	"log"
 	"os"
@@ -42,12 +42,12 @@ func (user User) Save() (bool, error) {
 	if !user.checkUserInfoParam() {
 		return false, errors.New("参数错误，请检查用户名和密码长度")
 	}
-	exists, e := util.Exists(constants.PwdFilePath)
+	exists, e := util.Exists(common.PwdFilePath)
 	if e != nil {
 		return false, e
 	}
 	if !exists {
-		_, err := os.Create(constants.PwdFilePath)
+		_, err := os.Create(common.PwdFilePath)
 		if err != nil {
 			return false, err
 		}
@@ -60,7 +60,7 @@ func (user User) Save() (bool, error) {
 		return false, errors.New("此用户名已存在")
 	}
 
-	file, err := os.OpenFile(constants.PwdFilePath, os.O_WRONLY|os.O_APPEND, 777)
+	file, err := os.OpenFile(common.PwdFilePath, os.O_WRONLY|os.O_APPEND, 777)
 	if err != nil {
 		return false, err
 	}
@@ -82,7 +82,7 @@ func (user User) Save() (bool, error) {
 
 // 判断用户名称是否存在
 func hasExistUserName(username string) (bool, error) {
-	file, err := os.OpenFile(constants.PwdFilePath, os.O_RDONLY, 777)
+	file, err := os.OpenFile(common.PwdFilePath, os.O_RDONLY, 777)
 	if err != nil {
 		log.Printf("open pwd file error: %s\n", err.Error())
 		return true, err
@@ -108,7 +108,7 @@ func hasExistUserName(username string) (bool, error) {
 
 // 登录(判断用户名和密码是否正确)
 func (user User) CheckPassword() (correct bool, ex error) {
-	file, err := os.OpenFile(constants.PwdFilePath, os.O_RDONLY, 777)
+	file, err := os.OpenFile(common.PwdFilePath, os.O_RDONLY, 777)
 	if err != nil {
 		return false, err
 	}

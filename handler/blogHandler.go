@@ -2,7 +2,7 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/zavier/blog-admin-backend/constants"
+	"github.com/zavier/blog-admin-backend/common"
 	"github.com/zavier/blog-admin-backend/server"
 	"log"
 	"net/http"
@@ -24,6 +24,10 @@ func Save(context *gin.Context) {
 		log.Printf("blog bind error: %s\n", err.Error())
 		context.JSON(http.StatusOK, ErrorResult(StatusBadRequest, "参数错误"))
 		return
+	}
+
+	if blog.Author == "" {
+		blog.Author = context.GetString(common.JwtIdentityKey)
 	}
 
 	err = blog.SaveBlog()
@@ -50,6 +54,10 @@ func Update(context *gin.Context) {
 		log.Printf("blog bind error: %s\n", err.Error())
 		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "参数错误"))
 		return
+	}
+
+	if blog.Author == "" {
+		blog.Author = context.GetString(common.JwtIdentityKey)
 	}
 	err = blog.UpdateBlog()
 	if err != nil {
@@ -81,7 +89,12 @@ func GetBlog(context *gin.Context) {
 			if err != nil {
 				context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, err.Error()))
 			} else {
-				context.JSON(http.StatusOK, SuccessResult(blog))
+				author := blog.Author
+				if author != context.GetString(common.JwtIdentityKey) {
+					context.JSON(http.StatusOK, ErrorResult(StatusUnauthorized, "无权访问此博客"))
+				} else {
+					context.JSON(http.StatusOK, SuccessResult(blog))
+				}
 			}
 		}
 	}
@@ -100,7 +113,13 @@ func List(context *gin.Context) {
 	if err != nil {
 		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, err.Error()))
 	} else {
-		context.JSON(http.StatusOK, SuccessResult(list))
+		destBlogList := make([]server.BlogBase, 0)
+		for _, b := range list {
+			if b.Author == context.GetString(common.JwtIdentityKey) {
+				destBlogList = append(destBlogList, b)
+			}
+		}
+		context.JSON(http.StatusOK, SuccessResult(destBlogList))
 	}
 }
 
@@ -136,7 +155,7 @@ func Upload(context *gin.Context) {
 	}
 	log.Printf("upload file name %s\n", file.Filename)
 
-	err = context.SaveUploadedFile(file, constants.BlogPath+"/"+file.Filename)
+	err = context.SaveUploadedFile(file, common.BlogPath+"/"+file.Filename)
 	if err != nil {
 		context.JSON(http.StatusOK, ErrorResult(StatusInternalServerError, "上传文件失败"))
 		return
