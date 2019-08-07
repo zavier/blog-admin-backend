@@ -25,7 +25,7 @@ func init() {
 	middleWare, err := jwt.New(&jwt.GinJWTMiddleware{
 		Realm:       "login",
 		Key:         []byte(common.JwtSecretKey),
-		Timeout:     time.Hour * 2,
+		Timeout:     time.Hour * 12,
 		MaxRefresh:  time.Hour,
 		IdentityKey: common.JwtIdentityKey,
 		PayloadFunc: func(data interface{}) jwt.MapClaims {

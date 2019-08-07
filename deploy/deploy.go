@@ -31,7 +31,7 @@ func init() {
 		if err != nil {
 			log.Printf("deploy error: %s\n", err.Error())
 		}
-	}, 5*time.Second)
+	}, 5*time.Minute)
 }
 
 // 全部发布(会清空之前内容)
