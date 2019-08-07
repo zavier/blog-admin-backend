@@ -18,7 +18,7 @@ type User struct {
 }
 
 func init() {
-	exists, e := common.Exists(common.PwdFilePath)
+	exists, e := common.ExistsPath(common.PwdFilePath)
 	if e != nil {
 		log.Fatal("exist pwd file error", e)
 	}

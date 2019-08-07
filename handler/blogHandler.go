@@ -4,6 +4,7 @@ import (
 	bytes2 "bytes"
 	"github.com/gin-gonic/gin"
 	"github.com/zavier/blog-admin-backend/common"
+	"github.com/zavier/blog-admin-backend/deploy"
 	"github.com/zavier/blog-admin-backend/server"
 	"io/ioutil"
 	"log"
@@ -185,7 +186,7 @@ func DeployAll(context *gin.Context) {
 		}
 	}()
 
-	err := server.HexoDeployAll(context.GetString(common.JwtIdentityKey))
+	err := deploy.HexoDeployAll(context.GetString(common.JwtIdentityKey))
 	if err != nil {
 		context.JSON(http.StatusOK, common.ErrorResult(common.StatusInternalServerError, err.Error()))
 		return

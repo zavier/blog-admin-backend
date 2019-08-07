@@ -22,11 +22,13 @@ const (
 )
 
 var (
-	CurrentPath        string
 	BlogPath           string
 	BlogManageFileName string
 	PwdFilePath        string
 	IndexFile          string
+
+	// 文档是否有更新, 暂时供自动发布使用
+	BlogUpdated = false
 )
 
 func init() {
@@ -34,7 +36,6 @@ func init() {
 	if err != nil {
 		log.Fatal("get curPath error", err)
 	}
-	CurrentPath = curPath
 	BlogPath = curPath + "/" + blogPath
 	BlogManageFileName = curPath + "/" + blogManageFileName
 	PwdFilePath = curPath + "/" + pwdFilePath

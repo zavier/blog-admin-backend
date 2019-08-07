@@ -8,7 +8,7 @@ import (
 
 // 初始化博客的索引
 func InitBlogIndex(index string) error {
-	exists, err := Exists(IndexFile)
+	exists, err := ExistsPath(IndexFile)
 	if err != nil {
 		return err
 	}

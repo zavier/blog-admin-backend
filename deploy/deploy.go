@@ -1,6 +1,8 @@
-package server
+package deploy
 
 import (
+	"github.com/zavier/blog-admin-backend/common"
+	"github.com/zavier/blog-admin-backend/server"
 	"io/ioutil"
 	"log"
 	"os"
@@ -16,6 +18,22 @@ tags: ${tags}
 ---
 `
 
+func init() {
+	updatedUser := "zheng"
+	// 启动定时任务，定时扫描状态，进行发布
+	common.StartTimer(func() {
+		if !common.BlogUpdated {
+			return
+		}
+		log.Println("blog has update, start deploying...")
+		common.BlogUpdated = false
+		err := HexoDeployAll(updatedUser)
+		if err != nil {
+			log.Printf("deploy error: %s\n", err.Error())
+		}
+	}, 5*time.Second)
+}
+
 // 全部发布(会清空之前内容)
 func HexoDeployAll(username string) error {
 	sourcePath := os.Getenv("SOURCE_PATH")
@@ -30,7 +48,7 @@ func HexoDeployAll(username string) error {
 	}
 
 	// 遍历所有博客，拷贝文件
-	baseBlogList, err := BlogList()
+	baseBlogList, err := server.BlogList()
 	if err != nil {
 		return err
 	}
@@ -97,4 +115,5 @@ func doDeploy() {
 		log.Fatal("read stdout error", err)
 	}
 	log.Println(string(res))
+	log.Println("deploy success!")
 }

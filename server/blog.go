@@ -40,7 +40,7 @@ type Blog struct {
 // 初始化准备数据
 func prepareData() error {
 	// 初始化博客路径
-	exist, e := common.Exists(common.BlogPath)
+	exist, e := common.ExistsPath(common.BlogPath)
 	if e != nil {
 		return e
 	}
@@ -53,7 +53,7 @@ func prepareData() error {
 	}
 
 	// 初始化博客管理文件
-	exist, e = common.Exists(common.BlogManageFileName)
+	exist, e = common.ExistsPath(common.BlogManageFileName)
 	if e != nil {
 		return e
 	}
@@ -161,6 +161,9 @@ func (blog *Blog) SaveBlog() error {
 	if err != nil {
 		return err
 	}
+
+	// 将更新状态置为已更新
+	common.BlogUpdated = true
 	return nil
 }
 
@@ -210,7 +213,6 @@ func (blog *Blog) UpdateBlog() error {
 		blogList = append(blogList, b)
 	}
 
-	log.Printf("blogs : %v\n", blogList)
 	if _, err := recordFile.Seek(0, 0); err != nil {
 		return err
 	}
@@ -229,6 +231,8 @@ func (blog *Blog) UpdateBlog() error {
 		}
 	}
 
+	// 将更新状态置为已更新
+	common.BlogUpdated = true
 	return nil
 }
 
