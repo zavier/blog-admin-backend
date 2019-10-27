@@ -18,7 +18,8 @@ tags: ${tags}
 ---
 `
 
-func init() {
+// 暂停自动发布功能（已将方法名从init改为initStop）
+func initStop() {
 	updatedUser := "zheng"
 	// 启动定时任务，定时扫描状态，进行发布
 	common.StartTimer(func() {
