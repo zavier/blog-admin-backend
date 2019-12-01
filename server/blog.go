@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -327,11 +328,26 @@ func BlogList() ([]BlogBase, error) {
 		}
 		blogList = append(blogList, blogBase)
 	}
+	sortByIdAndTotoPrimary(blogList)
+	return blogList, nil
+}
+
+// 按照ID倒序，但是todo标签的优先级最高
+func sortByIdAndTotoPrimary(blogList []BlogBase) {
 	// 按照ID倒序
 	if len(blogList) > 0 {
 		sort.Slice(blogList, func(i, j int) bool {
 			return blogList[i].Id > blogList[j].Id
 		})
+		// todo标签优先
+		for i := 0; i < len(blogList); i++ {
+			blog := blogList[i]
+			if strings.Contains(blog.Categories, "todo") {
+				for j := i; i > 0; i-- {
+					blogList[j] = blogList[j-1]
+				}
+				blogList[0] = blog
+			}
+		}
 	}
-	return blogList, nil
 }
