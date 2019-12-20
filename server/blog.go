@@ -343,7 +343,7 @@ func sortByIdAndTotoPrimary(blogList []BlogBase) {
 		for i := 0; i < len(blogList); i++ {
 			blog := blogList[i]
 			if strings.Contains(blog.Categories, "todo") {
-				for j := i; i > 0; i-- {
+				for j := i; j > 0; j-- {
 					blogList[j] = blogList[j-1]
 				}
 				blogList[0] = blog

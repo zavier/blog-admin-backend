@@ -60,7 +60,7 @@ func init() {
 			c.JSON(http.StatusOK, common.SuccessResult(message))
 		},
 		Unauthorized: func(c *gin.Context, code int, message string) {
-			log.Printf("Unauthorized code:%d message%s\n", code, message)
+			log.Printf("Unauthorized code:%d message:%s\n", code, message)
 			c.JSON(http.StatusOK, common.ErrorResult(common.StatusUnauthorized, "登录失效"))
 		},
 		// TokenLookup is a string in the form of "<source>:<name>" that is used
