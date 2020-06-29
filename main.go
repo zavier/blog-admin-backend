@@ -19,7 +19,7 @@ func main() {
 	router.Use(middleware.Cors())
 
 	// 登陆相关
-	userRouter := router.Group("/user")
+	userRouter := router.Group("/blog/user")
 	userRouter.POST("/register", handler.Register)
 	userRouter.POST("/login", middleware.JwtMiddleware().LoginHandler)
 
@@ -31,7 +31,7 @@ func main() {
 	})
 
 	// 博客相关
-	blogRouter := router.Group("/blog")
+	blogRouter := router.Group("/blog/blog")
 	blogRouter.POST("/save", handler.SaveBlog)
 	blogRouter.POST("/update", handler.UpdateBlog)
 	blogRouter.GET("/list", handler.ListBlog)
